@@ -1,0 +1,10 @@
+Version 0.1l 23/6/2016
+ - Adjusted for new tags in Observation Data
+ - Thanks to Protogen and Big Kahuna for their contributions
+
+Version 0.1m 24/6/2016
+ - Fixed issue with Radar.ini
+ - Fixed issue when Radar Loop has less than 6 images
+ - Thanks to Ceriouss for the radar fix
+
+
