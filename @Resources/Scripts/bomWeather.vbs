@@ -1,4 +1,4 @@
-'Version 0.1l
+'Version 0.1m
 
 Option Explicit
 
@@ -680,12 +680,21 @@ Function Update_Forecast ()
 
     Set xml = CreateObject("Microsoft.XMLHTTP")
 
-    If ProxyPassword <> "" Then
-      xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
-    Else
-      xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
-    End If
-    xml.Send
+    On Error Resume Next
+
+      If ProxyPassword <> "" Then
+        xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
+      Else
+        xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
+      End If
+      xml.Send
+    
+      If  Err.Number <> 0 Then
+        RaiseException "Poll Forecast Page Response - " & Forecast_url, Err.Number, Err.Description
+      End If
+    
+    On Error GoTo 0
+        
     Set f = fs.CreateTextFile (log_file & "-Updating.txt", True)
     f.write "Updating Forecast Measures"
     f.close
@@ -1474,9 +1483,47 @@ Private Function MoonPhaseInfo()
     
 End Function
 
-Dim fs, f, wResponse, InTime, wRegExp, wMeasureDefs, wMeasureIdx, RadarLocation
+Sub RaiseException (pErrorSection, pErrorCode, pErrorMessage)
+
+    Dim errfs, errf, errContent
+    
+    Set errfs = CreateObject ("Scripting.FileSystemObject")
+    Set errf = errfs.CreateTextFile(log_file & "-errors.txt", True)
+    
+    errContent = Now() & vbCRLF & vbCRLF & _
+                 pErrorSection & vbCRLF & _
+                 "Error Code: " & pErrorCode & vbCRLF & _
+                 "--------------------------------------" & vbCRLF & _
+                 pErrorMessage
+    errf.write errContent
+    errf.close
+    
+    If FileTracking Then
+      Set errf = errfs.CreateTextFile (log_file & "-errors-" & UpdateTimeStamp & ".txt", True)
+      errf.write errContent
+      errf.close
+    End If
+
+    Set errf = Nothing
+    
+    If errfs.FileExists(log_file & "-Updating.txt") Then errfs.DeleteFile(log_file & "-Updating.txt") 
+
+    Set errfs = Nothing
+    
+    WScript.Quit
+
+End Sub
+
+Function MyLPad (MyValue, MyPadChar, MyPaddedLength) 
+  MyLpad = String(MyPaddedLength - Len(MyValue), MyPadChar) & MyValue 
+End Function
+
+Dim fs, f, wResponse, InTime, wRegExp, wMeasureDefs, wMeasureIdx, RadarLocation, UpdateTimeStamp
+
 
    InTime = Now()
+   UpdateTimeStamp = Year(InTime) & MyLpad(Month(InTime),"0",2) & MyLpad(Day(InTime),"0",2) & "-" & MyLpad(Hour(InTime),"0",2) & MyLpad(Minute(InTime),"0",2) & MyLpad(Second(InTime),"0",2)
+
    
    Set fs = CreateObject ("Scripting.FileSystemObject")
 
@@ -1576,3 +1623,4 @@ Dim fs, f, wResponse, InTime, wRegExp, wMeasureDefs, wMeasureIdx, RadarLocation
    
    Set f = Nothing
    Set fs = Nothing
+   
