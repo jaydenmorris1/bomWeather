@@ -1,6 +1,6 @@
 Option Explicit
 
-Dim wsh, wAppDir, wTempDir, f, fs, InTime, wbomDetails, contents
+Dim wsh, wAppDir, wTempDir, f, fs, InTime, wbomDetails, contents, wDebug
 Dim RadarLocation, wImageURL0, wImageURL1, wImageURL2, wImageURL3, wImageURL4, wImageURL5
 Const ApplicationFolder = "Rainmeter-kanine"
 
@@ -10,6 +10,7 @@ wTempDir = (wsh.ExpandEnvironmentStrings("%TEMP%")) & "\"& ApplicationFolder
 Set wsh = Nothing
 
 InTime = Now()
+wDebug = False
    
 Set fs = CreateObject ("Scripting.FileSystemObject")
 
@@ -54,11 +55,12 @@ Sub GetRadar
     
     contents = xml.responseText
     
-    Set fs = CreateObject ("Scripting.FileSystemObject")
-    Set f = fs.CreateTextFile("Radar.html", True)
-    f.write wURL & vbCRLF & contents
-    f.close
-
+    If wDebug Then
+      Set fs = CreateObject ("Scripting.FileSystemObject")
+      Set f = fs.CreateTextFile("Radar.html", True)
+      f.write wURL & vbCRLF & contents
+      f.close
+    End If
 
     wImageURL0 = parse_item (contents,"theImageNames[0] = """ ,"""")
     wImageURL1 = parse_item (contents,"theImageNames[1] = """ ,"""")
