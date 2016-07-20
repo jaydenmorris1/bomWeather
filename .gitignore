@@ -4,6 +4,8 @@ bomRadar-calculations.txt
 bomWeather-calculations.txt
 bomWeatherForecast-Updating.txt
 bomWeatherObservation-Updating.txt
+bomWeatherForecast-errors.txt
+bomWeatherObservation-errors.txt
 
 # Windows image file caches
 Thumbs.db

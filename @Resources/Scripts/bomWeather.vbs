@@ -640,12 +640,21 @@ Function Update_Observation ()
 
   Set xml = CreateObject("Microsoft.XMLHTTP")
   observation_url = observation_url & "?" & RND()*1000000000000000 
-  If ProxyPassword <> "" Then
-    xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
-  Else
-    xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
-  End If
-  xml.Send
+
+  On Error Resume Next
+
+    If ProxyPassword <> "" Then
+      xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
+    Else
+      xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
+    End If
+    xml.Send
+
+    If  Err.Number <> 0 Then
+      RaiseException "Poll Forecast Page Response - " & Forecast_url, Err.Number, Err.Description
+    End If
+    
+  On Error GoTo 0
 
   Set f = fs.CreateTextFile (wTempDir & "/" & log_file & ".html", True)
   f.write (xml.responseText)
