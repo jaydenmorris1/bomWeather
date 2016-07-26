@@ -1288,8 +1288,17 @@ Private Function GetSunRiseInfo()
     'First Determine the Longitude/Latitude and Time Difference
     Set xml = CreateObject("Microsoft.XMLHTTP")
     wLongLatURL = "http://www.ga.gov.au/bin/geodesy/run/gazmap_sunrise?placename=" & Replace(SunriseLocation," ","+") & "&placetype=R&state=" & State
+
+    On Error Resume Next
+
     xml.Open "POST", wLongLatURL, False, ProxyUsername, ProxyPassword
     xml.Send
+
+    If  Err.Number <> 0 Then
+      RaiseException "Poll Forecast Page Response - " & Forecast_url, Err.Number, Err.Description
+    End If
+    
+    On Error GoTo 0
 	
     contents = xml.responseText
     contents = CStr(contents)
@@ -1632,4 +1641,3 @@ Dim fs, f, wResponse, InTime, wRegExp, wMeasureDefs, wMeasureIdx, RadarLocation,
    
    Set f = Nothing
    Set fs = Nothing
-   
