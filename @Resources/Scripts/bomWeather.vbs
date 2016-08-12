@@ -1279,7 +1279,7 @@ End Function
 
 Private Function GetSunRiseInfo()
 
-  Dim xml, LatDeg, LatMin, LongDeg, LongMin, TimeOffSet, CurrentDay, f, fs, wLongLatURL
+  Dim xml, LatDeg, LatMin, LongDeg, LongMin, TimeOffSet, CurrentDay, fsun, fssun, wLongLatURL
 	
   If SunriseLocation <> "" Then
   	
@@ -1291,25 +1291,25 @@ Private Function GetSunRiseInfo()
 
     On Error Resume Next
 
-    xml.Open "POST", wLongLatURL, False, ProxyUsername, ProxyPassword
+    xml.Open "GET", wLongLatURL, False, ProxyUsername, ProxyPassword
     xml.Send
 
     If  Err.Number <> 0 Then
-      RaiseException "Poll Forecast Page Response - " & Forecast_url, Err.Number, Err.Description
+      RaiseException "Long/Lat Lookup Page - " & wLongLatURL, Err.Number, Err.Description
     End If
     
     On Error GoTo 0
 	
     contents = xml.responseText
     contents = CStr(contents)
-    	
+   	
     Item = parse_item (contents, "document.Sunrise.Location.value='" & SunriseLocation,"(" & TimeZone & ")")
 
     LatDeg = parse_item (contents, "LatDeg.value=",";")
     LatMin = parse_item (contents, "LatMin.value=",";")
     LongDeg = parse_item (contents, "LongDeg.value=",";")
     LongMin = parse_item (contents, "LongMin.value=",";")
-
+    
     contents = parse_item(contents, "austzone", "(" & TimeZone & ")")
 
     contents = Mid(contents, InStrrev(contents, "Value=", -1, vbTextCompare))
@@ -1346,11 +1346,12 @@ Private Function GetSunRiseInfo()
     AddItem "Day 0 SunSet", Mid(Item,1,2) & ":" & Mid(Item,3,2)
 
     xml.Open "POST", "http://www.ga.gov.au/bin/geodesy/run/moonrisenset", False, ProxyUsername, ProxyPassword
+        
     xml.Send "&LatDeg=" & LatDeg & "&LatMin=" & LatMin & _ 
            "&LongDeg=" & LongDeg & "&LongMin=" & LongMin & _ 
            "&TimeZone=" & TimeOffSet & "&Event=1&Date=" & _
-           DatePart("d",CurrentDay)&"/"&DatePart("m",CurrentDay)&"/"&DatePart("yyyy",CurrentDay)
-
+           DatePart("d",CurrentDay)&"/"&mylpad(DatePart("m",CurrentDay),"0",2)&"/"&DatePart("yyyy",CurrentDay)
+           
     contents = xml.responseText
 
     'Set fs = CreateObject ("Scripting.FileSystemObject")
@@ -1373,11 +1374,11 @@ Private Function GetSunRiseInfo()
 
     CurrentDay = DateAdd("d", 1, CurrentDay)
 
-    xml.Open "POST", "http://www.ga.gov.au/bin/astro/sunrisenset", False, ProxyUsername, ProxyPassword
+    xml.Open "POST", "http://www.ga.gov.au/bin/geodesy/run/sunrisenset", False, ProxyUsername, ProxyPassword
     xml.Send "&LatDeg=" & LatDeg & "&LatMin=" & LatMin & _ 
            "&LongDeg=" & LongDeg & "&LongMin=" & LongMin & _ 
            "&TimeZone=" & TimeOffSet & "&Event=1&Date=" & _
-           DatePart("d",CurrentDay)&"/"&DatePart("m",CurrentDay)&"/"&DatePart("yyyy",CurrentDay)
+           DatePart("d",CurrentDay)&"/"&mylpad(DatePart("m",CurrentDay),"0",2)&"/"&DatePart("yyyy",CurrentDay)
 
     contents = xml.responseText
 
@@ -1395,7 +1396,7 @@ Private Function GetSunRiseInfo()
     Item = parse_item (contents, "Set ","<")
     AddItem "Day 1 SunSet", Mid(Item,1,2) & ":" & Mid(Item,3,2)
 
-    xml.Open "POST", "http://www.ga.gov.au/bin/astro/moonrisenset", False, ProxyUsername, ProxyPassword
+    xml.Open "POST", "http://www.ga.gov.au/bin/geodesy/run/moonrisenset", False, ProxyUsername, ProxyPassword
     xml.Send "&LatDeg=" & LatDeg & "&LatMin=" & LatMin & _ 
              "&LongDeg=" & LongDeg & "&LongMin=" & LongMin & _ 
              "&TimeZone=" & TimeOffSet & "&Event=1&Date=" & _
