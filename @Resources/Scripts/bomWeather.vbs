@@ -1,4 +1,4 @@
-'Version 0.1m
+'jjm1-edit Version 0.01
 
 Option Explicit
 
@@ -182,13 +182,13 @@ End Function
 
 Function Current_Temp ()
 
-	Current_Temp = Get_Cache_Value("Current Temp", observation_file) & "°"
+	Current_Temp = Get_Cache_Value("Current Temp", observation_file) & "°C"
 
 End Function
 
 Function App_Temp ()
 
-	App_Temp = Get_Cache_Value("App Temp", observation_file) & "°"
+	App_Temp = Get_Cache_Value("App Temp", observation_file) & "°C"
 
 End Function
 
@@ -230,9 +230,9 @@ End Function
 
 Function Current_WindDirSpeed ()
 
-  Current_WindDirSpeed  = Get_Cache_Value("Wind Direction", observation_file) & " " & _
+  Current_WindDirSpeed  = Get_Cache_Value("Wind Direction", observation_file) & " - " & _
                           Get_Cache_Value("Wind Speed km", observation_file) & "/" & _
-                          Get_Cache_Value("Wind Gust km", observation_file) & " kmh"
+                          Get_Cache_Value("Wind Gust km", observation_file) & "kmh"
 
 End Function
 
@@ -303,7 +303,7 @@ End Function
 
 Function Current_Forecast_ShortText ()
 
-  Current_Forecast_ShortText  = Trim(Current_Forecast_Day () & " " & Current_Forecast_MinMax ())
+  Current_Forecast_ShortText  = Current_Forecast_Day () & " " & Current_Forecast_MinMax ()
 
 End Function
 
@@ -640,21 +640,12 @@ Function Update_Observation ()
 
   Set xml = CreateObject("Microsoft.XMLHTTP")
   observation_url = observation_url & "?" & RND()*1000000000000000 
-
-  On Error Resume Next
-
-    If ProxyPassword <> "" Then
-      xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
-    Else
-      xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
-    End If
-    xml.Send
-
-    If  Err.Number <> 0 Then
-      RaiseException "Poll Forecast Page Response - " & Forecast_url, Err.Number, Err.Description
-    End If
-    
-  On Error GoTo 0
+  If ProxyPassword <> "" Then
+    xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
+  Else
+    xml.Open "POST", observation_url , False, ProxyUsername, ProxyPassword
+  End If
+  xml.Send
 
   Set f = fs.CreateTextFile (wTempDir & "/" & log_file & ".html", True)
   f.write (xml.responseText)
@@ -689,21 +680,12 @@ Function Update_Forecast ()
 
     Set xml = CreateObject("Microsoft.XMLHTTP")
 
-    On Error Resume Next
-
-      If ProxyPassword <> "" Then
-        xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
-      Else
-        xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
-      End If
-      xml.Send
-    
-      If  Err.Number <> 0 Then
-        RaiseException "Poll Forecast Page Response - " & Forecast_url, Err.Number, Err.Description
-      End If
-    
-    On Error GoTo 0
-        
+    If ProxyPassword <> "" Then
+      xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
+    Else
+      xml.Open "POST", Forecast_url, False, ProxyUsername, ProxyPassword
+    End If
+    xml.Send
     Set f = fs.CreateTextFile (log_file & "-Updating.txt", True)
     f.write "Updating Forecast Measures"
     f.close
@@ -886,7 +868,9 @@ Private Function parse_html (filetype)
 		Set f = fs.CreateTextFile (wTempDir & "/" & log_file & ".txt", True)
 		f.write (contents)
 		f.close
-		fs.DeleteFile(log_file & "-Updating.txt") 
+		If (fs.FileExists (log_file & "-Updating.txt")) Then
+			fs.DeleteFile(log_file & "-Updating.txt") 
+		End If
 		Set f = Nothing
 		Set fs = Nothing
 		
@@ -1036,6 +1020,29 @@ Private Function parse_item (ByRef contents, start_tag, end_tag)
 
 End Function
 
+Private Function csvValue (ByRef csvcontent)
+
+	Dim position, Item, wTrim
+	
+	If InStr (csvcontent, ",") < InStr (csvcontent, "<C10>") Then
+          position = InStr(csvcontent, ",")-1
+          wTrim=2
+        Else 
+	  position = InStr(csvcontent, "<C10>")-1
+	  wTrim=6
+	End If
+
+	If position > 0 Then
+	  item = Left(csvcontent,position)
+	  csvcontent = Mid(csvcontent,position+wTrim)
+	Else
+	  item = "End of CSV"
+	End If
+
+	csvValue = Trim(Item)
+
+End Function
+
 Private Sub AddItem (Element, NewItem)
 
   Dim wElementTag
@@ -1094,7 +1101,6 @@ Private Function parse_melbourne_forecast_data (ByRef contents)
   End If
   
   Day0 = parse_item (contents, "Forecast For ", "</h2>")
-  Day0 = Trim(Replace(Day0,"the rest of","The rest of"))
 
   AddItem "Forecast Day 0", Day0
 
@@ -1159,9 +1165,9 @@ Private Function parse_melbourne_forecast_data (ByRef contents)
   AddItem "Forecast Day 6 Max", parse_item (contents, "class=""max"">", "</em>")
   AddItem "Forecast Day 6 Text", parse_item (contents, "<p>", "</p>")
 
-  GetSunRiseInfo
+  'GetSunRiseInfo
   
-  AddItem "Moon Phase", MoonPhaseInfo()
+  'AddItem "Moon Phase", MoonPhaseInfo()
   
   AddItem "End of File", Now()
 
@@ -1266,11 +1272,12 @@ Private Function parse_sydney_forecast_data (ByRef contents)
   AddItem "Forecast Day 6 Text", parse_item (contents, "day", "City:")
   AddItem "Forecast Day 6 Min", parse_item (contents, " Min: ", " Max:")
   AddItem "Forecast Day 6 Max", parse_item (contents, " Max: ", "<C10>")
-	
-  GetSunRiseInfo
-  GetTideInfo
 
-  AddItem "Moon Phase", MoonPhaseInfo()
+  'GetSunRiseInfo
+  'GetTideInfo
+
+  'AddItem "Moon Phase", MoonPhaseInfo()
+
   AddItem "End of File", Now()
 
   parse_sydney_forecast_data = parsed_data
@@ -1279,7 +1286,7 @@ End Function
 
 Private Function GetSunRiseInfo()
 
-  Dim xml, LatDeg, LatMin, LongDeg, LongMin, TimeOffSet, CurrentDay, fsun, fssun, wLongLatURL
+  Dim xml, LatDeg, LatMin, LongDeg, LongMin, TimeOffSet, CurrentDay, f, fs, wLongLatURL
 	
   If SunriseLocation <> "" Then
   	
@@ -1288,28 +1295,19 @@ Private Function GetSunRiseInfo()
     'First Determine the Longitude/Latitude and Time Difference
     Set xml = CreateObject("Microsoft.XMLHTTP")
     wLongLatURL = "http://www.ga.gov.au/bin/geodesy/run/gazmap_sunrise?placename=" & Replace(SunriseLocation," ","+") & "&placetype=R&state=" & State
-
-    On Error Resume Next
-
-    xml.Open "GET", wLongLatURL, False, ProxyUsername, ProxyPassword
+    xml.Open "POST", wLongLatURL, False, ProxyUsername, ProxyPassword
     xml.Send
-
-    If  Err.Number <> 0 Then
-      RaiseException "Long/Lat Lookup Page - " & wLongLatURL, Err.Number, Err.Description
-    End If
-    
-    On Error GoTo 0
 	
     contents = xml.responseText
     contents = CStr(contents)
-   	
+    	
     Item = parse_item (contents, "document.Sunrise.Location.value='" & SunriseLocation,"(" & TimeZone & ")")
 
     LatDeg = parse_item (contents, "LatDeg.value=",";")
     LatMin = parse_item (contents, "LatMin.value=",";")
     LongDeg = parse_item (contents, "LongDeg.value=",";")
     LongMin = parse_item (contents, "LongMin.value=",";")
-    
+
     contents = parse_item(contents, "austzone", "(" & TimeZone & ")")
 
     contents = Mid(contents, InStrrev(contents, "Value=", -1, vbTextCompare))
@@ -1346,12 +1344,11 @@ Private Function GetSunRiseInfo()
     AddItem "Day 0 SunSet", Mid(Item,1,2) & ":" & Mid(Item,3,2)
 
     xml.Open "POST", "http://www.ga.gov.au/bin/geodesy/run/moonrisenset", False, ProxyUsername, ProxyPassword
-        
     xml.Send "&LatDeg=" & LatDeg & "&LatMin=" & LatMin & _ 
            "&LongDeg=" & LongDeg & "&LongMin=" & LongMin & _ 
            "&TimeZone=" & TimeOffSet & "&Event=1&Date=" & _
-           DatePart("d",CurrentDay)&"/"&mylpad(DatePart("m",CurrentDay),"0",2)&"/"&DatePart("yyyy",CurrentDay)
-           
+           DatePart("d",CurrentDay)&"/"&DatePart("m",CurrentDay)&"/"&DatePart("yyyy",CurrentDay)
+
     contents = xml.responseText
 
     'Set fs = CreateObject ("Scripting.FileSystemObject")
@@ -1374,11 +1371,11 @@ Private Function GetSunRiseInfo()
 
     CurrentDay = DateAdd("d", 1, CurrentDay)
 
-    xml.Open "POST", "http://www.ga.gov.au/bin/geodesy/run/sunrisenset", False, ProxyUsername, ProxyPassword
+    xml.Open "POST", "http://www.ga.gov.au/bin/astro/sunrisenset", False, ProxyUsername, ProxyPassword
     xml.Send "&LatDeg=" & LatDeg & "&LatMin=" & LatMin & _ 
            "&LongDeg=" & LongDeg & "&LongMin=" & LongMin & _ 
            "&TimeZone=" & TimeOffSet & "&Event=1&Date=" & _
-           DatePart("d",CurrentDay)&"/"&mylpad(DatePart("m",CurrentDay),"0",2)&"/"&DatePart("yyyy",CurrentDay)
+           DatePart("d",CurrentDay)&"/"&DatePart("m",CurrentDay)&"/"&DatePart("yyyy",CurrentDay)
 
     contents = xml.responseText
 
@@ -1396,7 +1393,7 @@ Private Function GetSunRiseInfo()
     Item = parse_item (contents, "Set ","<")
     AddItem "Day 1 SunSet", Mid(Item,1,2) & ":" & Mid(Item,3,2)
 
-    xml.Open "POST", "http://www.ga.gov.au/bin/geodesy/run/moonrisenset", False, ProxyUsername, ProxyPassword
+    xml.Open "POST", "http://www.ga.gov.au/bin/astro/moonrisenset", False, ProxyUsername, ProxyPassword
     xml.Send "&LatDeg=" & LatDeg & "&LatMin=" & LatMin & _ 
              "&LongDeg=" & LongDeg & "&LongMin=" & LongMin & _ 
              "&TimeZone=" & TimeOffSet & "&Event=1&Date=" & _
@@ -1502,47 +1499,9 @@ Private Function MoonPhaseInfo()
     
 End Function
 
-Sub RaiseException (pErrorSection, pErrorCode, pErrorMessage)
-
-    Dim errfs, errf, errContent
-    
-    Set errfs = CreateObject ("Scripting.FileSystemObject")
-    Set errf = errfs.CreateTextFile(log_file & "-errors.txt", True)
-    
-    errContent = Now() & vbCRLF & vbCRLF & _
-                 pErrorSection & vbCRLF & _
-                 "Error Code: " & pErrorCode & vbCRLF & _
-                 "--------------------------------------" & vbCRLF & _
-                 pErrorMessage
-    errf.write errContent
-    errf.close
-    
-    If FileTracking Then
-      Set errf = errfs.CreateTextFile (log_file & "-errors-" & UpdateTimeStamp & ".txt", True)
-      errf.write errContent
-      errf.close
-    End If
-
-    Set errf = Nothing
-    
-    If errfs.FileExists(log_file & "-Updating.txt") Then errfs.DeleteFile(log_file & "-Updating.txt") 
-
-    Set errfs = Nothing
-    
-    WScript.Quit
-
-End Sub
-
-Function MyLPad (MyValue, MyPadChar, MyPaddedLength) 
-  MyLpad = String(MyPaddedLength - Len(MyValue), MyPadChar) & MyValue 
-End Function
-
-Dim fs, f, wResponse, InTime, wRegExp, wMeasureDefs, wMeasureIdx, RadarLocation, UpdateTimeStamp
-
+Dim fs, f, wResponse, InTime, wRegExp, wMeasureDefs, wMeasureIdx, RadarLocation
 
    InTime = Now()
-   UpdateTimeStamp = Year(InTime) & MyLpad(Month(InTime),"0",2) & MyLpad(Day(InTime),"0",2) & "-" & MyLpad(Hour(InTime),"0",2) & MyLpad(Minute(InTime),"0",2) & MyLpad(Second(InTime),"0",2)
-
    
    Set fs = CreateObject ("Scripting.FileSystemObject")
 
@@ -1579,12 +1538,10 @@ Dim fs, f, wResponse, InTime, wRegExp, wMeasureDefs, wMeasureIdx, RadarLocation,
 
    f.writeline FormatCalc("StationAt", Station_At)
    f.writeline FormatCalc("CurrentTemp", Current_Temp)
-   f.writeline FormatCalc("AppTemp", App_Temp)	' Craig
    f.writeline FormatCalc("ObservedMaxTempTime", Observed_MaxTempTime)
    f.writeline FormatCalc("CurrentPressure", Current_Pressure)
    f.writeline FormatCalc("CurrentRelHumidity", Current_Rel_Humidity)
    f.writeline FormatCalc("CurrentRainfall", Current_RainFall)
-   f.writeline FormatCalc("CurrentWindDirSpeed", Current_WindDirSpeed)	' Craig
    f.writeline FormatCalc("CurrentForecastText", Current_Forecast_Text)
    f.writeline FormatCalc("CurrentForecastShortText", Current_Forecast_ShortText)
    f.writeline FormatCalc("CurrentForecastImage", Forecast_Image(0))
