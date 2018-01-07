@@ -4,6 +4,10 @@ bomWeather - Australian Forecast and Observation Rainmeter Skin for Australia
 
 This branch includes some fixes to try and suppress frequent script error popups and two new .ini skins
 
+![BOM-illustro-skin.jpg](BOM-illustro-skin.jpg)
+
+![BOM-illustro-skin2.jpg](BOM-illustro-skin2.jpg)
+
 Installation
 ============
 1) Install Rainmeter from www.rainmeter.net
